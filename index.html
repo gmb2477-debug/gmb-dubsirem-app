@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DubSIreM">
+<link rel="apple-touch-icon" href="logo.jpg">
 <meta name="theme-color" content="#1a1a1a">
 <title>GMB-DubSIreM</title>
-<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiUm9sYW5kIER1YnNpcmVuIiwic2hvcnRfbmFtZSI6IkR1YnNpcmVuIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMxYTFhMWEiLCJ0aGVtZV9jb2xvciI6IiMxYTFhMWEifQ==">
+<link rel="manifest" href="manifest.json">
 <!-- STYLES PLACEHOLDER -->
 <style>
 /* Reset & Base */
@@ -805,7 +807,15 @@ body {
 
   // Service worker registration for PWA
   if ('serviceWorker' in navigator) {
-    // Inline no-op SW not needed for basic "add to home screen"
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('SW registered: ', registration);
+        })
+        .catch((registrationError) => {
+          console.log('SW registration failed: ', registrationError);
+        });
+    });
   }
 })();
 </script>
