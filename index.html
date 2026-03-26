@@ -508,7 +508,22 @@ body {
   // === SPLASH SCREEN ===
   const splash = document.getElementById('splash');
   const app = document.getElementById('app');
+  
+  // Initialize AudioContext on first user interaction (required for iOS)
+  function initAudioContext() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+  
   splash.addEventListener('click', () => {
+    // Initialize audio context on splash click (iOS requirement)
+    initAudioContext();
+    
     splash.classList.add('fade-out');
     setTimeout(() => {
       splash.style.display = 'none';
@@ -517,6 +532,8 @@ body {
   });
   splash.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    // Initialize audio context on touch (iOS requirement)
+    initAudioContext();
     splash.click();
   }, { passive: false });
 
@@ -535,43 +552,48 @@ body {
   let shaperType = 'none';
 
   function initAudio() {
-    if (audioCtx) return;
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx && audioCtx.state === 'running') return;
+    
+    // Use the iOS-compatible init function
+    initAudioContext();
 
-    // Master
-    masterGain = audioCtx.createGain();
-    masterGain.gain.value = params.masterVol;
-    masterGain.connect(audioCtx.destination);
+    // Only setup nodes if not already done
+    if (!masterGain) {
+      // Master
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = params.masterVol;
+      masterGain.connect(audioCtx.destination);
 
-    // Filter
-    filterNode = audioCtx.createBiquadFilter();
-    filterNode.type = 'lowpass';
-    filterNode.frequency.value = params.cutoff;
-    filterNode.Q.value = params.resonance;
-    filterNode.connect(masterGain);
+      // Filter
+      filterNode = audioCtx.createBiquadFilter();
+      filterNode.type = 'lowpass';
+      filterNode.frequency.value = params.cutoff;
+      filterNode.Q.value = params.resonance;
+      filterNode.connect(masterGain);
 
-    // Waveshaper
-    waveShaperNode = audioCtx.createWaveShaper();
-    waveShaperNode.curve = makeDistortionCurve(0);
-    waveShaperNode.connect(filterNode);
+      // Waveshaper
+      waveShaperNode = audioCtx.createWaveShaper();
+      waveShaperNode.curve = makeDistortionCurve(0);
+      waveShaperNode.connect(filterNode);
 
-    // Delay
-    delayNode = audioCtx.createDelay(2);
-    delayNode.delayTime.value = params.delayTime;
-    feedbackGain = audioCtx.createGain();
-    feedbackGain.gain.value = params.regen;
-    delayDry = audioCtx.createGain();
-    delayDry.gain.value = 1 - params.mix;
-    delayWet = audioCtx.createGain();
-    delayWet.gain.value = params.mix;
+      // Delay
+      delayNode = audioCtx.createDelay(2);
+      delayNode.delayTime.value = params.delayTime;
+      feedbackGain = audioCtx.createGain();
+      feedbackGain.gain.value = params.regen;
+      delayDry = audioCtx.createGain();
+      delayDry.gain.value = 1 - params.mix;
+      delayWet = audioCtx.createGain();
+      delayWet.gain.value = params.mix;
 
-    // Routing: source -> dry -> waveshaper
-    //          source -> delay -> feedback loop -> wet -> waveshaper
-    delayNode.connect(feedbackGain);
-    feedbackGain.connect(delayNode);
-    delayNode.connect(delayWet);
-    delayWet.connect(waveShaperNode);
-    delayDry.connect(waveShaperNode);
+      // Routing: source -> dry -> waveshaper
+      //          source -> delay -> feedback loop -> wet -> waveshaper
+      delayNode.connect(feedbackGain);
+      feedbackGain.connect(delayNode);
+      delayNode.connect(delayWet);
+      delayWet.connect(waveShaperNode);
+      delayDry.connect(waveShaperNode);
+    }
   }
 
   function makeDistortionCurve(amount) {
